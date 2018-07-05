@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="css/base.css"/>
+    <link rel="stylesheet" href="css/step2.css"/>
+    <title>File APIによるファイル読み込み</title>
+</head>
+<body>
+<div id="main">
+    <div id="loadedImage">
+    </div>
+    <div id="fileZone">
+        <div id="fileZoneInner">
+            <div>
+                <input type="file" id="fileInput" multiple="multiple" accept="image/*" />
+            </div>
+            <div id="headerZone">ファイルのアップロード</div>
+            <div class="inner">
+                <p id="navigationText">ここをタップするか、写真をドラッグアンドドロップしてください。</p>
+                <p>読み込んだ画像が随時表示されます。</p>
+                <p id="loadingInfoText"></p>
+                <div id="loadingBarBox">
+                    <div id="loadingBar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script src="libs/jquery-2.1.1.min.js"></script>
+<script src="js/step2.js"></script>
+</html>

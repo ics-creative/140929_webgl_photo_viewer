@@ -1,0 +1,78 @@
+@charset "UTF-8";
+//-------------------------------------------------
+//  Compassの設定
+//-------------------------------------------------
+// Compassのインポート
+@import "compass";
+
+// Webkit系ブラウザ以外のベンダープレフィックスを付加しない設定
+$supported-browsers: reject(browsers(),
+  blackberry,
+  android-chrome,
+  firefox,
+  android-firefox,
+  ie,
+  ie-mobile,
+  opera,
+  opera-mini,
+  opera-mobile
+);
+/* --------------------------------------
+   画面パーツのスタイル設定
+  -------------------------------------- */
+#main
+{
+  margin-left: 10px;
+  margin-right: 10px;
+  position: relative;
+  height: 100%;
+
+  #fileZone {
+    $boxH:360;
+
+    #headerZone {
+      font-size: 30px;
+      margin-bottom: 5px;
+    }
+
+    width: 400px;
+    height: $boxH + px;
+    left: 50%;
+    bottom: 50%;
+    margin-left: -200px;
+    margin-bottom: - $boxH / 2 + px;
+    position: absolute;
+    color: #9197a3;
+    background-color: rgba(255,255,255,0.9);
+    border: 1px solid;
+    border-color: #e5e6e9 #dfe0e4 #d0d1d5;
+    border-radius: 3px;
+    z-index: 10;
+    padding: 10px;
+
+    &.off {
+      top: auto;
+      bottom: 0;
+      margin-bottom: 0;
+      height: 60px;
+      div.inner {
+        display: none;
+      }
+    }
+    
+    #fileZoneInner {
+      border: 5px dotted rgba(255,255,255,0.9);
+      box-sizing: border-box;
+
+      height: 100%;
+      padding: 10px;
+      &.dragenter {
+        border-color: #5f81d2;
+        
+      }
+    }
+    #textLog {
+      color: #f00;
+    }
+  }
+}
