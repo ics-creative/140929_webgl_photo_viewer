@@ -1,166 +1,139 @@
-// ライブラリを読み込み
-/// <reference path="../libs/jquery.d.ts" />
-var demo;
-(function (demo) {
-    var FileUpload = (function () {
-        function FileUpload() {
-            // 写真読み込み完了回数
-            this._imageRead = 0;
-            // アップロードしたファイルリスト
-            this._imageFiles = [];
-            // AwayJSに渡す画像リスト
-            this._imageList = [];
-            // 画像の読み込み割合
-            this._loadingRatio = 0;
-            // HTML要素を取得。
-            this._loadingInfoText = document.getElementById("loadingInfoText");
-            this._loadingBar = document.getElementById("loadingBar");
-            this._fileZone = document.getElementById("fileZone");
-            this._fileZoneInner = document.getElementById("fileZoneInner");
-            this.eventSetting();
-        }
-        /** 各種イベント設定 */
-        FileUpload.prototype.eventSetting = function () {
-            var _this = this;
-            // ドラッグアンドドロップイベント登録
-            this._fileZone.addEventListener("dragover", function (event) {
-                return _this.dragEnterHandler(event);
-            });
-            this._fileZone.addEventListener("dragleave", function (event) {
-                return _this.dragLeaveHandler(event);
-            });
-            this._fileZone.addEventListener("drop", function (event) {
-                return _this.dropHandler(event);
-            });
-            this._fileInput = document.getElementById("fileInput");
-            this._fileInput.addEventListener("change", function (event) {
-                return _this.inputChangeHandler(event);
-            });
-        };
+// 読み込むべき写真の枚数
+let _imageCount;
+// 写真読み込み完了回数
+let _imageRead = 0;
+// アップロードしたファイルリスト
+let _imageFiles = [];
+// AwayJSに渡す画像リスト
+let _imageList = [];
+// ファイルリーダー
+let _fileReader;
+// 画像の読み込み割合
+let _loadingRatio = 0;
+let _loadingTimer;
 
-        /** ドラッグオーバー時の処理 */
-        FileUpload.prototype.dragEnterHandler = function (event) {
-            // デフォルトの挙動を停止
-            event.preventDefault();
-            this._fileZoneInner.className = "dragenter";
-        };
+// 案内文
+const loadingInfoText = document.getElementById("loadingInfoText");
+// ローディングバー
+const loadingBar = document.getElementById("loadingBar");
+// ファイルアップロードゾーン
+const fileZone = document.getElementById("consoleZone");
+// ファイルアップロードゾーン中身
+const fileZoneInner = document.getElementById("fileZoneInner");
+// ドラッグアンドドロップイベント登録
+fileZone.addEventListener("dragover", dragEnterHandler);
+fileZone.addEventListener("dragleave", dragLeaveHandler);
+fileZone.addEventListener("drop", dropHandler);
 
-        /** ドラッグリーブ時の処理 */
-        FileUpload.prototype.dragLeaveHandler = function (event) {
-            // デフォルトの挙動を停止
-            event.preventDefault();
-            this._fileZoneInner.className = "";
-        };
+// input要素。type="file"が設定されている。IDはfileInput。
+const fileInput = document.getElementById("fileInput");
+fileInput.addEventListener("change", inputChangeHandler);
 
-        /** ファイルをドロップした時の処理 */
-        FileUpload.prototype.dropHandler = function (event) {
-            // デフォルトの挙動を停止
-            event.preventDefault();
-            this._fileZoneInner.className = "";
-            this.fileReadInit(event.dataTransfer.files);
-        };
+/** ドラッグオーバー時の処理 */
+function dragEnterHandler(event) {
+  // デフォルトの挙動を停止
+  event.preventDefault();
+  fileZoneInner.className = "dragenter";
+}
 
-        /** input内のファイルが変更された時の処理 */
-        FileUpload.prototype.inputChangeHandler = function (event) {
-            this.fileReadInit(event.target.files);
-        };
+/** ドラッグリーブ時の処理 */
+function dragLeaveHandler(event) {
+  // デフォルトの挙動を停止
+  event.preventDefault();
+  fileZoneInner.className = "";
+}
 
-        /** 複数ファイルの読み込みを開始する */
-        FileUpload.prototype.fileReadInit = function (files) {
-            var _this = this;
-            // ファイルリストを初期化
-            this._imageFiles = [];
-            this._imageRead = 0;
-            this._loadingBar.style.width = "0%";
-            this._loadingInfoText.innerText = "";
+/** ファイルをドロップした時の処理 */
+function dropHandler(event) {
+  // デフォルトの挙動を停止
+  event.preventDefault();
+  fileZoneInner.className = "";
+  fileReadInit(event.dataTransfer.files);
+}
 
-            var filesLength = files.length;
-            for (var i = 0; i < filesLength; i++) {
-                var file = files[i];
+/** input内のファイルが変更された時の処理 */
+function inputChangeHandler(event) {
+  fileReadInit(event.target.files);
+}
 
-                // 画像ファイルの時のみ、_imageFilesに格納する。
-                if (file.type.match("image.*")) {
-                    this._imageFiles.push(file);
-                }
-            }
-            this._imageCount = this._imageFiles.length;
-            if (this._imageCount > 0) {
-                // ファイルの読み取り開始
-                this._fileReader = new FileReader();
-                this._fileReader.addEventListener("load", function (event) {
-                    return _this.singleFileReadOnLoadHandler(event);
-                });
-                this.singleFileReadStartHandler(0);
-                var _fileUpload = this;
-                this._loadingTimer = setInterval(function () {
-                    _fileUpload.loadingTimerHandler();
-                }, 30);
-            }
-        };
+/** 複数ファイルの読み込みを開始する */
+function fileReadInit(files) {
+  // ファイルリストを初期化
+  _imageFiles = [];
+  _imageRead = 0;
+  loadingBar.style.width = "0%";
+  loadingInfoText.innerText = "";
+  const filesLength = files.length;
+  for (let i = 0; i < filesLength; i++) {
+    const file = files[i];
+    // 画像ファイルの時のみ、_imageFilesに格納する。
+    if (file.type.match("image.*")) {
+      _imageFiles.push(file);
+    }
+  }
+  _imageCount = _imageFiles.length;
+  if (_imageCount > 0) {
+    // ファイルの読み取り開始
+    _fileReader = new FileReader();
+    _fileReader.addEventListener("load", (event) => singleFileReadOnLoadHandler(event));
+    singleFileReadStartHandler(0);
+    _loadingTimer = setInterval(() => {
+      loadingTimerHandler();
+    }, 30);
+  }
+}
 
-        /** fileIndexで指定されたインデックスのファイル読み込む */
-        FileUpload.prototype.singleFileReadStartHandler = function (fileIndex) {
-            var file = this._imageFiles[fileIndex];
-            this._fileReader.readAsDataURL(file);
-        };
+/** fileIndexで指定されたインデックスのファイル読み込む */
+function singleFileReadStartHandler(fileIndex) {
+  const file = _imageFiles[fileIndex];
+  _fileReader.readAsDataURL(file);
+}
 
-        /** FileReaderのonloadイベントが発生した時の処理 */
-        FileUpload.prototype.singleFileReadOnLoadHandler = function (event) {
-            var _this = this;
-            var str = event.target.result;
+/** FileReaderのonloadイベントが発生した時の処理 */
+function singleFileReadOnLoadHandler(event) {
+  const str = event.target.result;
+  // 画像を作成
+  const image = new Image();
+  image.src = str;
+  image.addEventListener("load", (event) => singleFileReadCompleteHandler(image));
+}
 
-            // 画像を作成
-            var image = new Image();
-            image.src = str;
-            image.addEventListener("load", function (event) {
-                return _this.singleFileReadCompleteHandler(image);
-            });
-        };
+/** 一つの画像ファイルの読み込みが完了した時の処理 */
+function singleFileReadCompleteHandler(image) {
+  _imageList.push(image);
+  _imageRead++;
+  $("#loadedImage").prepend("<figure>" +
+    "<img src=\"" + image.src + "\" />" +
+    "<figcaption>" + _imageRead + "枚目の画像</figcaption>" +
+    "</figure>");
+  if (_imageRead >= _imageCount) {
+    // 読み込み完了した画像の枚数が、読み込むべき画像の枚数を超えていたら、全画像の読み込み終了処理
+    _loadingRatio = 100;
+    setTimeout(() => {
+      allFilesReadCompleteHandler();
+    }, 500);
+  }
+  else {
+    // 次のファイルの読み込み開始
+    _loadingRatio = Math.floor((_imageRead / _imageCount) * 100);
+    singleFileReadStartHandler(_imageRead);
+  }
+}
 
-        /** 一つの画像ファイルの読み込みが完了した時の処理 */
-        FileUpload.prototype.singleFileReadCompleteHandler = function (image) {
-            this._imageList.push(image);
-            this._imageRead++;
-            $("#loadedImage").prepend('<figure>' + '<img src="' + image.src + '" />' + '<figcaption>' + this._imageRead + '枚目の画像</figcaption>' + '</figure>');
-            if (this._imageRead >= this._imageCount) {
-                // 読み込み完了した画像の枚数が、読み込むべき画像の枚数を超えていたら、全画像の読み込み終了処理
-                this._loadingRatio = 100;
+/** ファイル読み込み中に定期的に実行される処理 */
+function loadingTimerHandler() {
+  const currentLoadingBarRatio = parseFloat(loadingBar.style.width);
+  const loadingBarWidth = currentLoadingBarRatio + 0.3 * (_loadingRatio - currentLoadingBarRatio);
+  loadingInfoText.innerText = "画像読み込み中:" + String(loadingBarWidth) + "%";
+  loadingBar.style.width = loadingBarWidth + "%";
+}
 
-                var _fileUpload = this;
-                setTimeout(function () {
-                    _fileUpload.allFilesReadCompleteHandler();
-                }, 500);
-            } else {
-                // 次のファイルの読み込み開始
-                this._loadingRatio = Math.floor((this._imageRead / this._imageCount) * 100);
-                this.singleFileReadStartHandler(this._imageRead);
-            }
-        };
-
-        /** ファイル読み込み中に定期的に実行される処理 */
-        FileUpload.prototype.loadingTimerHandler = function () {
-            var currentLoadingBarRatio = parseFloat(this._loadingBar.style.width);
-            var loadingBarWidth = currentLoadingBarRatio + 0.3 * (this._loadingRatio - currentLoadingBarRatio);
-            this._loadingInfoText.innerText = "画像読み込み中:" + String(parseInt(loadingBarWidth)) + "%";
-            this._loadingBar.style.width = loadingBarWidth + "%";
-        };
-
-        /** 全ての画像ファイルの読み込みが完了 */
-        FileUpload.prototype.allFilesReadCompleteHandler = function () {
-            clearInterval(this._loadingTimer);
-            if (this._loadingTimer)
-                this._loadingTimer = null;
-
-            this._loadingInfoText.innerText = "画像読み込み完了";
-            this._loadingBar.style.width = "100%";
-            alert("全ファイルの読み込み完了");
-        };
-        return FileUpload;
-    })();
-    demo.FileUpload = FileUpload;
-})(demo || (demo = {}));
-
-window.addEventListener("load", function () {
-    new demo.FileUpload();
-});
-//# sourceMappingURL=step2.js.map
+/** 全ての画像ファイルの読み込みが完了 */
+function allFilesReadCompleteHandler() {
+  clearInterval(_loadingTimer);
+  if (_loadingTimer)
+    _loadingTimer = null;
+  loadingInfoText.innerText = "画像読み込み完了";
+  loadingBar.style.width = "100%";
+  alert("全ファイルの読み込み完了");
+}
